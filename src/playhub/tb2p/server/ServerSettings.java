@@ -30,9 +30,9 @@ public class ServerSettings {
         // server.port
         int port = Integer.parseInt(prop.getProperty("server.port"));
         settings.setPort(port);
-        // server.max_players
-        int max_players = Integer.parseInt(prop.getProperty("server.max_connections"));
-        settings.setMaxConnections(max_players);
+        // server.max_connections
+        int max_connections = Integer.parseInt(prop.getProperty("server.max_connections"));
+        settings.setMaxConnections(max_connections);
         return settings;
     }
 

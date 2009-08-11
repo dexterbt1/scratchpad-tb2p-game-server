@@ -69,8 +69,3 @@ public class PDU {
 
 }
 
-
-class PDU__UnitTest {
-
-}
-

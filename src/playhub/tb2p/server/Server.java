@@ -24,7 +24,7 @@ public class Server {
     }
 
     public void run() {
-        ClientSocketHandler cso = new ClientSocketHandler(settings);
+        ClientManager cso = new ClientManager(settings);
         ServerSocketHandler ssh;
         try {
             NIOService service = new NIOService();

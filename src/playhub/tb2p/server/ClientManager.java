@@ -6,47 +6,43 @@
 package playhub.tb2p.server;
 
 import java.util.logging.*;
+import java.util.concurrent.*;
+import java.util.*;
 import java.io.*;
+
 import naga.*;
 import naga.packetreader.*;
 
 import playhub.tb2p.protocol.*;
 import playhub.tb2p.exceptions.*;
+import playhub.tb2p.server.*;
 
 /**
  *
  * @author dexter
  */
-public class ClientSocketHandler extends SocketObserverAdapter {
+public class ClientManager extends SocketObserverAdapter {
 
     protected static Logger logger = Logger.getLogger("playhub.tb2p.server.Server");
     private ServerSettings settings;
-    private int countConnections;
+    private GameKeeper gk = new GameKeeper();
 
-    public ClientSocketHandler(ServerSettings settings) {
+    public ClientManager(ServerSettings settings) {
         this.settings = settings;
-        this.countConnections = 0;
     }
 
     @Override
     public void connectionOpened(NIOSocket socket) {
-        if (this.countConnections >= settings.getMaxConnections()) {
-            // deny this connection, we've reach the capacity of this server
-            logger.info("socket denied: "+socket.getIp()+":"+socket.getPort());
-            socket.close();
-        }
-        else {
-            // otherwise, we will accept the connection
-            logger.info("socket opened: "+socket.getIp()+":"+socket.getPort());
-        }
-        this.countConnections++;
+        // otherwise, we will accept the connection
+        logger.info("socket opened: "+socket.getIp()+":"+socket.getPort());
         socket.setPacketReader(new AsciiLinePacketReader());
+        gk.registerSocket(socket);
     }
 
     @Override
     public void connectionBroken(NIOSocket socket, Exception e) {
         logger.info("socket disconnected: "+socket.getIp()+":"+socket.getPort());
-        this.countConnections--;
+        gk.unregisterSocket(socket);
     }
 
     @Override
@@ -57,10 +53,11 @@ public class ClientSocketHandler extends SocketObserverAdapter {
         }
         catch (MalformedPDUException mpe) {
             System.err.println(mpe.toString());
+            socket.close();
             return;
         }
         System.err.println("got pdu type="+pdu.getType().toString());
-        socket.write(packet);
+        gk.submit(socket, pdu);
     }
 
 }

@@ -12,11 +12,11 @@ import naga.*;
  */
 public class ServerSocketHandler extends ServerSocketObserverAdapter {
 
-    private ClientSocketHandler cso;
+    private ClientManager cso;
     private NIOServerSocket serverSocket;
 
     
-    public ServerSocketHandler(NIOServerSocket servsock, ClientSocketHandler cso) {
+    public ServerSocketHandler(NIOServerSocket servsock, ClientManager cso) {
         this.cso = cso;
         this.serverSocket = servsock;
         serverSocket.setConnectionAcceptor(ConnectionAcceptor.ALLOW); // default
