@@ -5,6 +5,7 @@
 
 package playhub.tb2p.server;
 
+import java.util.logging.*;
 import java.util.Properties;
 import java.io.*;
 /**
@@ -22,6 +23,30 @@ public class MainCLI {
     }
 
     public static void main(String[] args) {
+
+        //get the top Logger:
+        Logger topLogger = java.util.logging.Logger.getLogger("");
+
+        // Handler for console (reuse it if it already exists)
+        Handler consoleHandler = null;
+        //see if there is already a console handler
+        for (Handler handler : topLogger.getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                //found the console handler
+                consoleHandler = handler;
+                break;
+            }
+        }
+
+        if (consoleHandler == null) {
+            //there was no console handler found, create a new one
+            consoleHandler = new ConsoleHandler();
+            topLogger.addHandler(consoleHandler);
+        }
+        //set the console handler to fine:
+        consoleHandler.setLevel(java.util.logging.Level.FINEST);
+
+
         String configfile = System.getProperty(MainCLI.CONFIG_KEY);
         if (configfile == null) {
             MainCLI.die(MainCLI.CLI_USAGE);

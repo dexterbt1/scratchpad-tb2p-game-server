@@ -23,7 +23,7 @@ import playhub.tb2p.server.*;
  */
 public class ClientManager extends SocketObserverAdapter {
 
-    protected static Logger logger = Logger.getLogger("playhub.tb2p.server.Server");
+    protected static Logger logger = Logger.getLogger(ClientManager.class.getCanonicalName());
     private ServerSettings settings;
     private GameKeeper gk = new GameKeeper();
 
@@ -34,14 +34,14 @@ public class ClientManager extends SocketObserverAdapter {
     @Override
     public void connectionOpened(NIOSocket socket) {
         // otherwise, we will accept the connection
-        logger.info("socket opened: "+socket.getIp()+":"+socket.getPort());
+        logger.fine("socket opened: "+socket.getIp()+":"+socket.getPort());
         socket.setPacketReader(new AsciiLinePacketReader());
         gk.registerSocket(socket);
     }
 
     @Override
     public void connectionBroken(NIOSocket socket, Exception e) {
-        logger.info("socket disconnected: "+socket.getIp()+":"+socket.getPort());
+        logger.fine("socket disconnected: "+socket.getIp()+":"+socket.getPort());
         gk.unregisterSocket(socket);
     }
 
@@ -56,7 +56,6 @@ public class ClientManager extends SocketObserverAdapter {
             socket.close();
             return;
         }
-        System.err.println("got pdu type="+pdu.getType().toString());
         gk.submit(socket, pdu);
     }
 

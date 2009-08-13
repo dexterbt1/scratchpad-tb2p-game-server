@@ -5,6 +5,7 @@
 
 package playhub.tb2p.protocol;
 
+import java.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -18,8 +19,15 @@ public class PDU {
 
     private PDUType type;
     private long id;
+    private JSONObject json;
 
-    public PDU() { }
+    public PDU() {
+        this.json = new JSONObject();
+    }
+
+    public PDU(JSONObject jo) {
+        this.json = jo;
+    }
 
     public PDUType getType() { return this.type; }
     public void setType(PDUType type) { this.type = type; }
@@ -27,7 +35,17 @@ public class PDU {
     public long getId() { return this.id; }
     public void setId(long id) { this.id = id; }
 
-    
+    public Object getPduField(String key) {
+        return json.get(key);
+    }
+
+    public String getPduFieldString(String key) {
+        Object o = this.getPduField(key);
+        String v = (String)o;
+        return v;
+    }
+
+
     public static PDU parsedFromPacket(byte[] rawpacket) throws MalformedPDUException {
         // assume rawpacket is a json string already
         String json_string = new String(rawpacket);
@@ -43,7 +61,7 @@ public class PDU {
         JSONObject jo = (JSONObject)o;
 
 
-        PDU pdu = new PDU();
+        PDU pdu = new PDU(jo);
 
         // parse type
         if (!jo.containsKey("type")) { throw new MalformedPDUException("pdu.type is required"); }

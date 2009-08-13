@@ -5,15 +5,26 @@
 
 package playhub.tb2p.protocol;
 
+
+import java.math.BigDecimal;
+
 /**
  *
  * @author dexter
  */
 public class Player {
 
-    private boolean signedIn;
+    private String playerName;
+    private BigDecimal betAmount;
 
-    public boolean isSignedIn() { return this.signedIn; }
-    public void setSignedIn(boolean s) { this.signedIn = s; }
+    public Player(String name, BigDecimal betAmount) {
+        this.playerName = name;
+        this.betAmount = betAmount;
+    }
+
+    public String getName() { return this.playerName; }
+    public BigDecimal getBetAmount() { return this.betAmount; }
+
+    public String getUName() { return this.playerName.toLowerCase(); }
 
 }

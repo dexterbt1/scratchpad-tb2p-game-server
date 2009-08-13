@@ -9,8 +9,6 @@ package playhub.tb2p.exceptions;
  *
  * @author dexter
  */
-public class MalformedPDUException extends Exception {
-
-    public MalformedPDUException(String s) { super(s); }
+public class GameStateViolation extends Exception {
 
 }

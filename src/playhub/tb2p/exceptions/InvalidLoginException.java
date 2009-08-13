@@ -9,8 +9,9 @@ package playhub.tb2p.exceptions;
  *
  * @author dexter
  */
-public class MalformedPDUException extends Exception {
+public class InvalidLoginException extends Exception {
 
-    public MalformedPDUException(String s) { super(s); }
+    public InvalidLoginException() { }
+    public InvalidLoginException(String s) { super(s); }
 
 }

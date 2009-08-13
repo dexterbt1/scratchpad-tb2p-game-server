@@ -17,7 +17,7 @@ import naga.*;
 public class Server {
 
     protected ServerSettings settings;
-    protected Logger logger = Logger.getLogger("playhub.tb2p.server.Server");
+    protected Logger logger = Logger.getLogger(Server.class.getCanonicalName());
 
     public Server(ServerSettings settings) {
         this.settings = settings;
