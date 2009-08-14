@@ -15,6 +15,7 @@ public class ServerSettings {
 
     private int port;
     private int maxConnections;
+    private int playTurnDurationSeconds;
 
     public ServerSettings() {
     }
@@ -25,6 +26,9 @@ public class ServerSettings {
     public int getMaxConnections() { return this.maxConnections; }
     public void setMaxConnections(int maxPlayers) { this.maxConnections = maxPlayers; }
 
+    public int getPlayTurnDurationSeconds() { return this.playTurnDurationSeconds; }
+    public void setPlayTurnDurationSeconds(int s) { this.playTurnDurationSeconds = s; }
+
     public static ServerSettings getInstance(Properties prop) {
         ServerSettings settings = new ServerSettings();
         // server.port
@@ -33,6 +37,9 @@ public class ServerSettings {
         // server.max_connections
         int max_connections = Integer.parseInt(prop.getProperty("server.max_connections"));
         settings.setMaxConnections(max_connections);
+        // server.play_turn_duration_seconds
+        int play_turn_duration = Integer.parseInt(prop.getProperty("server.play_turn_duration_seconds"));
+        settings.setPlayTurnDurationSeconds(play_turn_duration);
         return settings;
     }
 

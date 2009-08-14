@@ -24,11 +24,10 @@ import playhub.tb2p.server.*;
 public class ClientManager extends SocketObserverAdapter {
 
     protected static Logger logger = Logger.getLogger(ClientManager.class.getCanonicalName());
-    private ServerSettings settings;
-    private GameKeeper gk = new GameKeeper();
-
+    private GameKeeper gk;
+    
     public ClientManager(ServerSettings settings) {
-        this.settings = settings;
+        gk = new GameKeeper(settings);
     }
 
     @Override
@@ -56,7 +55,7 @@ public class ClientManager extends SocketObserverAdapter {
             socket.close();
             return;
         }
-        gk.submit(socket, pdu);
+        gk.receivePDU(socket, pdu);
     }
 
 }
