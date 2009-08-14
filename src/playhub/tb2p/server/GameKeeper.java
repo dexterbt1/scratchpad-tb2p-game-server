@@ -17,22 +17,11 @@ import playhub.tb2p.protocol.*;
  *
  * @author dexter
  */
-public class GameKeeper implements Runnable {
+public class GameKeeper {
 
-    static class GameKeeperJob {
-        private PDU pdu;
-        private NIOSocket nios;
-        public GameKeeperJob(NIOSocket nios, PDU pdu) {
-            this.nios = nios;
-            this.pdu = pdu;
-        }
-        public PDU getPDU() { return this.pdu; }
-        public NIOSocket getNIOSocket() { return this.nios; }
-    }
 
     private Logger logger = Logger.getLogger(LoginRequestPDU.class.getCanonicalName());
 
-    private BlockingQueue<GameKeeperJob> jobQueue = new LinkedBlockingQueue<GameKeeperJob>();
     private ConcurrentMap<NIOSocket,GameSession> mapSockGame = new ConcurrentHashMap<NIOSocket,GameSession>();
     private ConcurrentMap<String,GameSession> mapIdSession = new ConcurrentHashMap<String,GameSession>();
     private Set<GameSession> gamesWaitingPlayers = new HashSet<GameSession>();
@@ -40,8 +29,6 @@ public class GameKeeper implements Runnable {
     private Set<String> playersPlaying = new HashSet<String>();
 
     public GameKeeper() {
-        // spawn interpreter
-        new Thread(this).start();
     }
 
     public void registerSocket(NIOSocket nios) {
@@ -54,8 +41,8 @@ public class GameKeeper implements Runnable {
             mapIdSession.remove(game.getGameId());
             if (gamesWaitingPlayers.contains(game)) { gamesWaitingPlayers.remove(game); }
             if (gamesActive.contains(game)) { gamesActive.remove(game); }
-            if (game.getPlayer1().getUName() != null) { playersPlaying.remove(game.getPlayer1().getUName()); }
-            if (game.getPlayer2().getUName() != null) { playersPlaying.remove(game.getPlayer2().getUName()); }
+            if (game.getPlayer1() != null) { playersPlaying.remove(game.getPlayer1().getUName()); }
+            if (game.getPlayer2() != null) { playersPlaying.remove(game.getPlayer2().getUName()); }
             // TODO: notify game error+end if in play
             mapSockGame.remove(nios);
             logger.fine("game unregistered gameId="+game.getGameId());
@@ -63,39 +50,23 @@ public class GameKeeper implements Runnable {
     }
 
     public void submit(NIOSocket nios, PDU pdu) {
-        jobQueue.offer(new GameKeeperJob(nios,pdu));
-    }
-
-
-    // -----------------
-    public void run() {
-        logger.info("GameKeeper worker interpreter thread started...");
-        while (true) {
-            GameKeeperJob job;
+        GameSession game = mapSockGame.get(nios);
+        if (game == null) {
+            // requires login first, expect that this is the first pdu
             try {
-                job = this.jobQueue.take();
-            } catch (InterruptedException ie) {
-                continue;
+                game = this.login(pdu);
+                mapSockGame.putIfAbsent(nios, game);
+                // reply
+                nios.write( new LoginResponsePDU(pdu.getId()).toJSONString().getBytes() );
             }
-            NIOSocket nios = job.getNIOSocket();
-            PDU pdu = job.getPDU();
-            GameSession game = mapSockGame.get(nios);
-            if (game == null) {
-                // requires login first, expect that this is the first pdu
-                try {
-                    game = this.login(pdu);
-                    mapSockGame.putIfAbsent(nios, game);
-                }
-                catch (InvalidLoginException ile) {
-                    logger.info(ile.toString());
-                    nios.close();
-                }
-                catch (GameStateViolation gsv) {
-                    // TODO: dump game state for debugging later
-                    logger.info(gsv.toString());
-                    nios.close();
-                }
-                continue;
+            catch (InvalidLoginException ile) {
+                logger.info(ile.toString());
+                nios.close();
+            }
+            catch (GameStateViolation gsv) {
+                // TODO: dump game state for debugging later
+                logger.info(gsv.toString());
+                nios.close();
             }
         }
     }

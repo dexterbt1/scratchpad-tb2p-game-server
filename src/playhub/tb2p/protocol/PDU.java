@@ -17,9 +17,17 @@ import playhub.tb2p.exceptions.*;
  */
 public class PDU {
 
-    private PDUType type;
+    public static enum Type {
+        REQUEST,
+        RESPONSE,
+        NOTIFICATION,
+    }
+
+    private Type type;
     private long id;
-    private JSONObject json;
+    private String command;
+
+    protected JSONObject json;
 
     public PDU() {
         this.json = new JSONObject();
@@ -29,11 +37,14 @@ public class PDU {
         this.json = jo;
     }
 
-    public PDUType getType() { return this.type; }
-    public void setType(PDUType type) { this.type = type; }
+    public Type getType() { return this.type; }
+    public void setType(Type type) { this.type = type; this.json.put("type", type.toString()); }
 
     public long getId() { return this.id; }
-    public void setId(long id) { this.id = id; }
+    public void setId(long id) { this.id = id; this.json.put("id", Long.valueOf(id)); }
+
+    public String getCommand() { return this.command; }
+    public void setCommand(String command) { this.command = command; this.json.put("command", command); }
 
     public Object getPduField(String key) {
         return json.get(key);
@@ -43,6 +54,10 @@ public class PDU {
         Object o = this.getPduField(key);
         String v = (String)o;
         return v;
+    }
+
+    public void setPduField(String key, Object o) {
+        this.json.put(key, o);
     }
 
 
@@ -66,7 +81,7 @@ public class PDU {
         // parse type
         if (!jo.containsKey("type")) { throw new MalformedPDUException("pdu.type is required"); }
         try {
-            pdu.setType(PDUType.valueOf((String)jo.get("type")));
+            pdu.setType(Type.valueOf((String)jo.get("type")));
         }
         catch (Exception e) {
             throw new MalformedPDUException("pdu.type is invalid");
@@ -82,7 +97,26 @@ public class PDU {
             throw new MalformedPDUException("pdu.id is invalid");
         }
 
+        // parse command (optional)
+        if (jo.containsKey("command")) {
+            Object command = jo.get("command");
+            if ((command != null) && (command instanceof String)) {
+                pdu.setCommand((String)command);
+            }
+        }
+
         return pdu;
+    }
+
+
+    public String toJSONString() {
+        return this.json.toJSONString();
+    }
+
+
+    @Override
+    public String toString() {
+        return this.toJSONString();
     }
 
 }

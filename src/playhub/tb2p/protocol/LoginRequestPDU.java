@@ -14,6 +14,8 @@ import playhub.tb2p.exceptions.*;
  */
 public class LoginRequestPDU extends PDU {
 
+    public static final String COMMAND = "LOGIN";
+
     private String gameId;
     private String playerName;
     private BigDecimal betAmount;
@@ -35,8 +37,7 @@ public class LoginRequestPDU extends PDU {
         String pname = null;
         BigDecimal bet = null;
         try {
-            String req = pdu.getPduFieldString("request");
-            if (req.equalsIgnoreCase("LOGIN")) {
+            if (pdu.getCommand().equals(LoginRequestPDU.COMMAND)) {
                 gid = pdu.getPduFieldString("game_id");
                 pname = pdu.getPduFieldString("player_name");
                 bet = new BigDecimal(pdu.getPduFieldString("bet_amount"));
