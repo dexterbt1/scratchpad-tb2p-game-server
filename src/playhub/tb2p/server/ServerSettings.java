@@ -16,6 +16,7 @@ public class ServerSettings {
     private int port;
     private int maxConnections;
     private int playTurnDurationSeconds;
+    private int clientWaitTimeoutSeconds;
 
     public ServerSettings() {
     }
@@ -29,6 +30,9 @@ public class ServerSettings {
     public int getPlayTurnDurationSeconds() { return this.playTurnDurationSeconds; }
     public void setPlayTurnDurationSeconds(int s) { this.playTurnDurationSeconds = s; }
 
+    public int getClientWaitTimeoutSeconds() { return this.clientWaitTimeoutSeconds; }
+    public void setClientWaitTimeoutSeconds(int s) { this.clientWaitTimeoutSeconds = s; }
+
     public static ServerSettings getInstance(Properties prop) {
         ServerSettings settings = new ServerSettings();
         // server.port
@@ -40,6 +44,10 @@ public class ServerSettings {
         // server.play_turn_duration_seconds
         int play_turn_duration = Integer.parseInt(prop.getProperty("server.play_turn_duration_seconds"));
         settings.setPlayTurnDurationSeconds(play_turn_duration);
+        // server.play_turn_duration_seconds
+        int client_wait = Integer.parseInt(prop.getProperty("server.client_wait_timeout_seconds"));
+        settings.setClientWaitTimeoutSeconds(client_wait);
+
         return settings;
     }
 

@@ -9,14 +9,14 @@ package playhub.tb2p.protocol;
  *
  * @author dexter
  */
-public class WaitOpponentNotificationPDU extends PDU {
-    
-    public static final String COMMAND = "WAIT_OPPONENT_PLAYER";
+public class GameCancelledNotificationPDU extends PDU {
 
-    public WaitOpponentNotificationPDU(long id) {
+    public static final String COMMAND = "GAME_CANCELLED";
+
+    public GameCancelledNotificationPDU(long id) {
         this.setId(id);
-        this.setCommand(COMMAND);
         this.setType(Type.NOTIFICATION);
+        this.setCommand(COMMAND);
     }
 
 }

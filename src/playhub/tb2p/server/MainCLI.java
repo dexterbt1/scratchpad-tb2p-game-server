@@ -45,6 +45,8 @@ public class MainCLI {
         }
         //set the console handler to fine:
         consoleHandler.setLevel(java.util.logging.Level.FINEST);
+        consoleHandler.setFormatter(new SingleLineFormatter());
+
 
 
         String configfile = System.getProperty(MainCLI.CONFIG_KEY);
@@ -65,5 +67,14 @@ public class MainCLI {
         server.run();
         
     }
+
+
+    public static final class SingleLineFormatter extends SimpleFormatter {
+        @Override
+        public String format(LogRecord record) {
+            return new java.util.Date() + " " + record.getLevel() + " " + record.getMessage() + "\r\n";
+        }
+    }
+
 
 }

@@ -11,7 +11,7 @@ package playhub.tb2p.protocol;
  */
 public class WaitTurnNotificationPDU extends PDU {
 
-    public static final String COMMAND = "WAIT_OPPONENT_PLAY_TURN";
+    public static final String COMMAND = "WAIT_OPPONENT_TURN";
 
     public WaitTurnNotificationPDU(long id) {
         this.setCommand(COMMAND);

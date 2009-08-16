@@ -7,6 +7,7 @@ package playhub.tb2p.protocol;
 
 
 import playhub.tb2p.exceptions.*;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  *
@@ -20,14 +21,16 @@ public class GameSession {
         PLAY_PLAYER1,
         PLAY_PLAYER2,
         DONE,
-        ABORTED
+        CANCELLED
     }
 
     private State gameState;
     private String gameId, gameIdLowercase;
-    private Player player1, player2;
+    private Player player1, player2, winner;
     private boolean player1TurnStarted, player2TurnStarted;
     private boolean player1TurnCompleted, player2TurnCompleted;
+
+    private ScheduledFuture<?> taskCancel, taskPenalizeP1, taskPenalizeP2;
 
     public GameSession(String gameId) {
         this.gameId = gameId;
@@ -61,6 +64,23 @@ public class GameSession {
     public String getGameId() { return this.gameId; }
     public Player getPlayer1() { return this.player1; }
     public Player getPlayer2() { return this.player2; }
+    public Player getWinner() { return this.winner; }
+
+    public ScheduledFuture getTaskCancel() { return this.taskCancel; }
+    public void setTaskCancel(ScheduledFuture<?> f) { this.taskCancel = f; }
+
+    public ScheduledFuture getTaskPenalizePlayer1() { return this.taskPenalizeP1; }
+    public void setTaskPenalizePlayer1(ScheduledFuture f) { this.taskPenalizeP1 = f; }
+
+    public ScheduledFuture getTaskPenalizePlayer2() { return this.taskPenalizeP2; }
+    public void setTaskPenalizePlayer2(ScheduledFuture f) { this.taskPenalizeP2 = f; }
+
+    public boolean inPlay() {
+        return (
+            (this.getGameState() == State.PLAY_PLAYER1)
+            || (this.getGameState()== State.PLAY_PLAYER2)
+        );
+    }
 
     public boolean hasPlayer1TurnStarted() { return this.player1TurnStarted; }
     public boolean hasPlayer1TurnCompleted() { return this.player1TurnCompleted; }
@@ -85,6 +105,9 @@ public class GameSession {
         if (this.getGameState() == State.WAIT_PLAYER2) {
             this.player2 = p2;
             this.gameState = State.PLAY_PLAYER1;
+            if (this.getTaskCancel() != null) {
+                this.getTaskCancel().cancel(true);
+            }
         }
         else {
             throw new GameStateViolation();
@@ -108,6 +131,7 @@ public class GameSession {
              (!this.hasPlayer1TurnCompleted()) ) {
             this.player1TurnCompleted = true;
             this.gameState = State.PLAY_PLAYER2;
+            if (this.getTaskPenalizePlayer1() != null) { this.getTaskPenalizePlayer1().cancel(true); }
         }
         else {
             throw new GameStateViolation();
@@ -132,6 +156,28 @@ public class GameSession {
              (!this.hasPlayer2TurnCompleted()) ) {
             this.player2TurnCompleted = true;
             this.gameState = State.DONE;
+            if (this.getTaskPenalizePlayer2() != null) { this.getTaskPenalizePlayer2().cancel(true); }
+        }
+        else {
+            throw new GameStateViolation();
+        }
+    }
+
+    public void cancelGame() throws GameStateViolation {
+        while (true) {
+            if ( this.getGameState() == State.WAIT_PLAYER2 ) {
+                // no winner
+                this.gameState = State.CANCELLED;
+                break;
+            }
+            throw new GameStateViolation();
+        }
+    }
+
+    public void penalizePlayer1() throws GameStateViolation {
+        if (this.getGameState() == State.PLAY_PLAYER1) {
+            this.winner = this.getPlayer2();
+            this.gameState = State.DONE;
         }
         else {
             throw new GameStateViolation();
@@ -139,5 +185,15 @@ public class GameSession {
     }
 
 
-    
+    public void penalizePlayer2() throws GameStateViolation {
+        if (this.getGameState() == State.PLAY_PLAYER2) {
+            this.winner = this.getPlayer1();
+            this.gameState = State.DONE;
+        }
+        else {
+            throw new GameStateViolation();
+        }
+    }
+
+
 }

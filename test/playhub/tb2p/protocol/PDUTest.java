@@ -78,28 +78,28 @@ public class PDUTest {
     @Test
     public void test__parsedFromPacket__gotRequest() throws Exception {
         PDU pdu = PDU.parsedFromPacket("{ \"type\" : \"REQUEST\", \"id\" : 0 }".getBytes());
-        assertEquals(pdu.getType(), PDUType.REQUEST);
+        assertEquals(pdu.getType(), PDU.Type.REQUEST);
         assertEquals(pdu.getId(), 0);
     }
 
     @Test
     public void test__parsedFromPacket__gotRequest2() throws Exception {
         PDU pdu = PDU.parsedFromPacket("{ \"type\" : \"REQUEST\", \"id\" : 12345 }".getBytes());
-        assertEquals(pdu.getType(), PDUType.REQUEST);
+        assertEquals(pdu.getType(), PDU.Type.REQUEST);
         assertEquals(pdu.getId(), 12345);
     }
 
     @Test
     public void test__parsedFromPacket__gotResponse() throws Exception {
         PDU pdu = PDU.parsedFromPacket("{ \"type\" : \"RESPONSE\", \"id\" : 12345 }".getBytes());
-        assertEquals(pdu.getType(), PDUType.RESPONSE);
+        assertEquals(pdu.getType(), PDU.Type.RESPONSE);
         assertEquals(pdu.getId(), 12345);
     }
 
     @Test
     public void test__parsedFromPacket__gotNotification() throws Exception {
         PDU pdu = PDU.parsedFromPacket("{ \"type\" : \"NOTIFICATION\", \"id\" : 12345 }".getBytes());
-        assertEquals(pdu.getType(), PDUType.NOTIFICATION);
+        assertEquals(pdu.getType(), PDU.Type.NOTIFICATION);
         assertEquals(pdu.getId(), 12345);
     }
 
