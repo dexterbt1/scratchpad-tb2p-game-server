@@ -21,7 +21,7 @@ public class GameKeeper {
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    private final Logger logger = Logger.getLogger(LoginRequestPDU.class.getCanonicalName());
+    private final Logger logger = Logger.getLogger(GameKeeper.class.getCanonicalName());
 
     private final ConcurrentMap<NIOSocket,GameSession> mapSockGame = new ConcurrentHashMap<NIOSocket,GameSession>();
     private final ConcurrentMap<String,GameSession> mapIdSession = new ConcurrentHashMap<String,GameSession>();
@@ -36,34 +36,56 @@ public class GameKeeper {
     private long pdu_counter = 0;
 
 
-    
-
+   
     public GameKeeper(ServerSettings settings) {
         this.settings = settings;
     }
 
     public void registerSocket(NIOSocket nios) {
+        // limit number of sockets per IP
     }
 
     public void unregisterSocket(NIOSocket nios) {
         // TODO: notify clients of game error+end if in play
         if (mapSockGame.containsKey(nios)) {
             GameSession game = mapSockGame.get(nios);
-            mapIdSession.remove(game.getGameId());
-            if (gamesWaitingPlayers.contains(game)) { gamesWaitingPlayers.remove(game); }
-            if (gamesActive.contains(game)) { gamesActive.remove(game); }
+            if (game.inPlay()) {
+                Player p1 = game.getPlayer1();
+                NIOSocket nios1 = mapPlayerSocket.get(p1);
+                Player p2 = game.getPlayer2();
+                NIOSocket nios2 = mapPlayerSocket.get(p2);
+                if (nios == nios1) {
+                    // player 1 is quitting OR got disconnected in the middle
+                    // of the game.
+                    this.penalizePlayer1(game);
+                }
+                else if (nios == nios2) {
+                    this.penalizePlayer2(game);
+                }
+            }
+            // house keeping
             if (game.getPlayer1() != null) {
                 String username = game.getPlayer1().getUName();
-                usernamesPlaying.remove(username);
-                mapPlayerSocket.remove(game.getPlayer1());
+                if (usernamesPlaying.contains(username)) {
+                    usernamesPlaying.remove(username);
+                    mapPlayerSocket.remove(game.getPlayer1());
+                    logger.finer("player1="+username+" of gameId="+game.getGameId()+" unregistered.");
+                }
             }
             if (game.getPlayer2() != null) {
                 String username = game.getPlayer2().getUName();
-                usernamesPlaying.remove(username);
-                mapPlayerSocket.remove(game.getPlayer2());
+                if (usernamesPlaying.contains(username)) {
+                    usernamesPlaying.remove(username);
+                    mapPlayerSocket.remove(game.getPlayer2());
+                    logger.finer("player2="+username+" of gameId="+game.getGameId()+" unregistered.");
+                }
             }
+            game.cancelTasks();
+            mapIdSession.remove(game.getGameId());
+            if (gamesWaitingPlayers.contains(game)) { gamesWaitingPlayers.remove(game); }
+            if (gamesActive.contains(game)) { gamesActive.remove(game); }
             mapSockGame.remove(nios);
-            logger.fine("game unregistered gameId="+game.getGameId());
+            System.gc();
         }
     }
 
@@ -76,40 +98,100 @@ public class GameKeeper {
                 mapSockGame.putIfAbsent(nios, game);
             }
             catch (InvalidLoginException ile) {
-                logger.info("invalid login exception "+ile.toString());
+                logger.warning("invalid login exception "+ile.toString());
                 nios.close();
             }
             catch (GameStateViolation gsv) {
                 // TODO: dump game state for debugging later
-                logger.info("game state violation "+gsv.toString());
+                logger.warning("game state violation "+gsv.toString());
                 nios.close();
             }
             return;
         }
         // interpret pdu based on game state
         if (game.inPlay()) {
-            // try if this is a PlayEndedNotification
-            try {
-                PlayEndedNotificationPDU playEndedPDU = new PlayEndedNotificationPDU(pdu);
-                if (mapPlayerSocket.get(game.getPlayer1()).equals(nios)) {
-                    // player1 ended
-                    this.switchPlayerTurns(game);
+            PDU pduToRelay = null;
+            while (true) {
+                // try if this is a PlayEndedNotification
+                try {
+                    PlayEndedNotificationPDU playEndedPDU = new PlayEndedNotificationPDU(pdu);
+                    if (mapPlayerSocket.get(game.getPlayer1()).equals(nios)) {
+                        // player1 ended
+                        this.switchPlayerTurns(game);
+                    }
+                    else if (mapPlayerSocket.get(game.getPlayer2()).equals(nios)) {
+                        // player2 ended
+                        this.finishGame(game);
+                    }
+                    else {
+                        throw new GameStateViolation();
+                    }
+                    break;
                 }
-                else if (mapPlayerSocket.get(game.getPlayer2()).equals(nios)) {
-                    // player2 ended
+                catch (MalformedPDUException malx) {
+                }
+                catch (GameStateViolation gsv) {
+                    logger.warning("game state violation during in-play play-ended pdu parsing: "+gsv.toString());
+                    break;
+                }
+                // continue parsing
+                // try if this is a ScoreUpdateNotification
+                try {
+                    ScoreUpdateNotificationPDU sun = new ScoreUpdateNotificationPDU(pdu);
+                    if (mapPlayerSocket.get(game.getPlayer1()).equals(nios)) {
+                        // player1's score update
+                        game.setPlayer1Score(sun.getScore());
+                        logger.finer("Player1 score updated to: "+String.valueOf(sun.getScore()));
+                    }
+                    else if (mapPlayerSocket.get(game.getPlayer2()).equals(nios)) {
+                        // player1's score update
+                        game.setPlayer2Score(sun.getScore());
+                        logger.finer("Player2 score updated to: "+String.valueOf(sun.getScore()));
+                    }
+                    else {
+                        throw new GameStateViolation();
+                    }
+                    pduToRelay = sun;
+                    break;
+                }
+                catch (MalformedPDUException malx) {
+                }
+                catch (GameStateViolation gsv) {
+                    // player tried to submit score even if it is not his/her turn
+                    // in this case, we will penalize the offender
+                    try {
+                        if (mapPlayerSocket.get(game.getPlayer1()).equals(nios)) {
+                            this.penalizePlayer1(game);
+                        }
+                        else if (mapPlayerSocket.get(game.getPlayer2()).equals(nios)) {
+                            this.penalizePlayer2(game);
+                        }
+                    }
+                    catch (Exception e) {
+                        logger.warning(e.toString());
+                    }
+                    break;
+                }
 
+                // default behavior is relay anything that does not affect game session
+                pduToRelay = pdu;
+                break;
+            }
+            // relay if applicable
+            if (pduToRelay != null) {
+                Player p1 = game.getPlayer1();
+                NIOSocket nios1 = mapPlayerSocket.get(p1);
+                Player p2 = game.getPlayer2();
+                NIOSocket nios2 = mapPlayerSocket.get(p2);
+                NIOSocket peer = nios1;
+                if (nios1 == nios) {
+                    peer = nios2;
                 }
-                else {
-                    throw new GameStateViolation();
-                }
-            } catch (MalformedPDUException malx) {
-                // TODO: relay pdu
-            } catch (GameStateViolation gsv) {
-                logger.info("game state violation during in-play pdu parsing: "+gsv.toString());
+                this.writePDU(peer, pduToRelay);
             }
         }
         else {
-            logger.info("game state inconsistent gameId="+game.getGameId());
+            logger.warning("game state inconsistent gameId="+game.getGameId());
             // TODO: penalize the offending client
         }
     }
@@ -134,7 +216,7 @@ public class GameKeeper {
             gamesActive.add(game);
             // login success
             this.writePDU(nios, new LoginResponsePDU(pdu.getId()));
-            logger.fine("player="+lp.getPlayerName()+" assigned to existing gameId="+game.getGameId());
+            logger.finer("player="+lp.getPlayerName()+" assigned to existing gameId="+game.getGameId());
             // player-2 should wait for his/her turn
             this.writePDU(nios, new WaitTurnNotificationPDU(this.getNextPduCounter()));
             // and we'll let the player-1 start playing (w/ duration)
@@ -162,7 +244,7 @@ public class GameKeeper {
             this.writePDU(nios, new LoginResponsePDU(pdu.getId()));
             // no opponent, so wait first
             this.writePDU(nios, new WaitOpponentNotificationPDU(this.getNextPduCounter()));
-            logger.fine("player="+lp.getPlayerName()+" created new gameId="+game.getGameId());
+            logger.finer("player="+lp.getPlayerName()+" created new gameId="+game.getGameId());
             // consider timing out, so as not to keep the client waiting for opponent
             ScheduledFuture<?> f = scheduler.schedule(
                     GameKeeper.newTaskCancelGame(this, game),
@@ -178,7 +260,7 @@ public class GameKeeper {
 
     public void switchPlayerTurns(GameSession gs) {
         try {
-            logger.fine("Switching player turns for gameId="+gs.getGameId());
+            logger.finer("switching player turns for gameId="+gs.getGameId());
             // end player-1's turn
             gs.endPlayPlayer1();
             Player p1 = gs.getPlayer1();
@@ -211,9 +293,57 @@ public class GameKeeper {
         }
     }
 
-    public void cancelGame(GameSession gs) {
+
+    /** Called to finish the game, as player1 and player2 have ended their
+     * turns. It is up to the @GameKeeper to select the winning player
+     *
+     * @param gs GameSession instance
+     */
+    public void finishGame(GameSession gs) {
         try {
-            logger.fine("Cancelling gameId="+gs.getGameId());
+            logger.finer("finishing game in order to select winner for gameId="+gs.getGameId());
+            gs.endPlayPlayer2();
+            Player p1 = gs.getPlayer1();
+            NIOSocket nios1 = mapPlayerSocket.get(p1);
+            Player p2 = gs.getPlayer2();
+            NIOSocket nios2 = mapPlayerSocket.get(p2);
+
+            Player winner = gs.getWinner();
+
+            if (winner != null) {
+                // has winner
+                if (p1 == winner) {
+                    // p1 is the winner
+                    this.writePDU(nios1, new GameDoneNotificationPDU(this.getNextPduCounter(),true));
+                    nios1.closeAfterWrite();
+                    this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
+                    nios2.closeAfterWrite();
+                }
+                else {
+                    // p2 is the winner
+                    this.writePDU(nios1, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
+                    nios1.closeAfterWrite();
+                    this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),true));
+                    nios2.closeAfterWrite();
+                }
+            }
+            else {
+                // no winner (draw)
+                this.writePDU(nios1, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
+                nios1.closeAfterWrite();
+                this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
+                nios2.closeAfterWrite();
+            }
+        }
+        catch (GameStateViolation gsv) {
+            // TODO: offensive client will be penalize, notify game winner then...
+            logger.warning("GameStateViolation detected at gameId="+gs.getGameId());
+        }
+    }
+
+    public void cancelGame(GameSession gs) {
+        try { 
+            logger.finer("Cancelling gameId="+gs.getGameId());
             gs.cancelGame();
             // try to inform player(s) that was cancelled/aborted
             Player p1 = gs.getPlayer1();
@@ -239,7 +369,7 @@ public class GameKeeper {
 
     public void penalizePlayer1(GameSession gs) {
         try {
-            logger.fine("Penalizing player1="+gs.getPlayer1().getName()+" gameId="+gs.getGameId());
+            logger.finer("penalizing player1="+gs.getPlayer1().getName()+" gameId="+gs.getGameId());
             gs.penalizePlayer1();
             Player p1 = gs.getPlayer1();
             NIOSocket nios1 = mapPlayerSocket.get(p1);
@@ -262,7 +392,7 @@ public class GameKeeper {
 
     public void penalizePlayer2(GameSession gs) {
         try {
-            logger.fine("Penalizing player2="+gs.getPlayer2().getName()+" gameId="+gs.getGameId());
+            logger.finer("penalizing player2="+gs.getPlayer2().getName()+" gameId="+gs.getGameId());
             gs.penalizePlayer2();
             Player p1 = gs.getPlayer1();
             NIOSocket nios1 = mapPlayerSocket.get(p1);

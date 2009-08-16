@@ -46,13 +46,12 @@ public class ClientManager extends SocketObserverAdapter {
         PDU pdu;
         try {
             pdu = PDU.parsedFromPacket(packet);
+            gk.receivePDU(socket, pdu);
         }
         catch (MalformedPDUException mpe) {
-            System.err.println(mpe.toString());
+            logger.warning(mpe.toString());
             socket.close();
-            return;
         }
-        gk.receivePDU(socket, pdu);
     }
 
 }

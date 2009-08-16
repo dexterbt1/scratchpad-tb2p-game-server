@@ -27,6 +27,7 @@ public class GameSession {
     private State gameState;
     private String gameId, gameIdLowercase;
     private Player player1, player2, winner;
+    private long player1Score, player2Score;
     private boolean player1TurnStarted, player2TurnStarted;
     private boolean player1TurnCompleted, player2TurnCompleted;
 
@@ -74,6 +75,12 @@ public class GameSession {
 
     public ScheduledFuture getTaskPenalizePlayer2() { return this.taskPenalizeP2; }
     public void setTaskPenalizePlayer2(ScheduledFuture f) { this.taskPenalizeP2 = f; }
+
+    public void cancelTasks() {
+        if (this.taskCancel != null) { this.taskCancel.cancel(true); }
+        if (this.taskPenalizeP1 != null) { this.taskPenalizeP1.cancel(true); }
+        if (this.taskPenalizeP2 != null) { this.taskPenalizeP2.cancel(true); }
+    }
 
     public boolean inPlay() {
         return (
@@ -157,6 +164,13 @@ public class GameSession {
             this.player2TurnCompleted = true;
             this.gameState = State.DONE;
             if (this.getTaskPenalizePlayer2() != null) { this.getTaskPenalizePlayer2().cancel(true); }
+            Player highScorer = this.getHighestScorePlayer();
+            if (highScorer != null) {
+                this.winner = highScorer;
+            }
+            else {
+                this.winner = null;
+            }
         }
         else {
             throw new GameStateViolation();
@@ -186,7 +200,8 @@ public class GameSession {
 
 
     public void penalizePlayer2() throws GameStateViolation {
-        if (this.getGameState() == State.PLAY_PLAYER2) {
+        if (   (this.getGameState() == State.PLAY_PLAYER2)
+            || (this.getGameState() == State.PLAY_PLAYER1) ) {
             this.winner = this.getPlayer1();
             this.gameState = State.DONE;
         }
@@ -194,6 +209,47 @@ public class GameSession {
             throw new GameStateViolation();
         }
     }
+
+    public long getPlayer1Score() { return this.player1Score; }
+
+    public void setPlayer1Score(long score) throws GameStateViolation {
+        if (this.getGameState() == State.PLAY_PLAYER1) {
+            this.player1Score = score;
+        }
+        else {
+            throw new GameStateViolation();
+        }
+    }
+
+    public long getPlayer2Score() { return this.player2Score; }
+
+    public void setPlayer2Score(long score) throws GameStateViolation {
+        if (this.getGameState() == State.PLAY_PLAYER2)  {
+            this.player2Score = score;
+        }
+        else {
+            throw new GameStateViolation();
+        }
+    }
+
+    public boolean isScoreDraw() { return (this.getPlayer1Score()==this.getPlayer2Score()); }
+
+    public Player getHighestScorePlayer() {
+        if (this.isScoreDraw()) {
+            return null;
+        }
+        else {
+            if (this.getPlayer1Score() > this.getPlayer2Score()) {
+                // player1 wins
+                return this.getPlayer1();
+            }
+            else {
+                // player2 wins
+                return this.getPlayer2();
+            }
+        }
+    }
+
 
 
 }

@@ -5,7 +5,7 @@
 
 package playhub.tb2p.protocol;
 
-import java.util.*;
+import java.util.logging.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -110,7 +110,10 @@ public class PDU {
 
 
     public String toJSONString() {
-        return this.json.toJSONString();
+        final Logger logger = Logger.getLogger(this.getClass().getCanonicalName());
+        String r = this.json.toJSONString();
+        logger.finest(r);
+        return r;
     }
 
 

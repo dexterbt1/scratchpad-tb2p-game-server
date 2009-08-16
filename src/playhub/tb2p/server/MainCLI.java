@@ -72,7 +72,7 @@ public class MainCLI {
     public static final class SingleLineFormatter extends SimpleFormatter {
         @Override
         public String format(LogRecord record) {
-            return new java.util.Date() + " " + record.getLevel() + " " + record.getMessage() + "\r\n";
+            return new java.util.Date() + " " + record.getLevel() + " " + record.getSourceClassName() + " " + record.getSourceMethodName() + " - " + record.getMessage() + "\r\n";
         }
     }
 
