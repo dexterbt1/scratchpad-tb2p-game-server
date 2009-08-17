@@ -5,6 +5,7 @@
 
 package playhub.tb2p.protocol;
 
+import playhub.tb2p.exceptions.*;
 /**
  *
  * @author dexter
@@ -17,6 +18,18 @@ public class WaitTurnNotificationPDU extends PDU {
         this.setCommand(COMMAND);
         this.setId(id);
         this.setType(Type.NOTIFICATION);
+    }
+
+    public WaitTurnNotificationPDU(PDU pdu) throws MalformedPDUException {
+        this.setId(pdu.getId());
+        if (      pdu.getCommand().equals(COMMAND)
+              && (pdu.getType()==PDU.Type.NOTIFICATION) ) {
+            // nop
+        }
+        else {
+            throw new MalformedPDUException("Invalid WaitTurnNotification");
+        }
+
     }
 
 }

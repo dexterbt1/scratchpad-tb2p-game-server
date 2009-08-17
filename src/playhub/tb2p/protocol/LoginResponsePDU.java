@@ -5,6 +5,7 @@
 
 package playhub.tb2p.protocol;
 
+import playhub.tb2p.exceptions.*;
 /**
  *
  * @author dexter
@@ -17,6 +18,18 @@ public class LoginResponsePDU extends PDU {
         this.setId(id);
         this.setType(PDU.Type.RESPONSE);        
         this.setCommand(COMMAND);
+    }
+
+    public LoginResponsePDU(PDU pdu) throws MalformedPDUException {
+        this(pdu.getId());
+        if (     (pdu.getCommand().equals(COMMAND))
+              && (pdu.getType() == PDU.Type.RESPONSE)
+                ) {
+            // nop
+        }
+        else {
+            throw new MalformedPDUException("Not a valid LoginResponse");
+        }
     }
 
 }

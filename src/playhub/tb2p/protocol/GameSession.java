@@ -67,14 +67,14 @@ public class GameSession {
     public Player getPlayer2() { return this.player2; }
     public Player getWinner() { return this.winner; }
 
-    public ScheduledFuture getTaskCancel() { return this.taskCancel; }
+    public ScheduledFuture<?> getTaskCancel() { return this.taskCancel; }
     public void setTaskCancel(ScheduledFuture<?> f) { this.taskCancel = f; }
 
-    public ScheduledFuture getTaskPenalizePlayer1() { return this.taskPenalizeP1; }
-    public void setTaskPenalizePlayer1(ScheduledFuture f) { this.taskPenalizeP1 = f; }
+    public ScheduledFuture<?> getTaskPenalizePlayer1() { return this.taskPenalizeP1; }
+    public void setTaskPenalizePlayer1(ScheduledFuture<?> f) { this.taskPenalizeP1 = f; }
 
-    public ScheduledFuture getTaskPenalizePlayer2() { return this.taskPenalizeP2; }
-    public void setTaskPenalizePlayer2(ScheduledFuture f) { this.taskPenalizeP2 = f; }
+    public ScheduledFuture<?> getTaskPenalizePlayer2() { return this.taskPenalizeP2; }
+    public void setTaskPenalizePlayer2(ScheduledFuture<?> f) { this.taskPenalizeP2 = f; }
 
     public void cancelTasks() {
         if (this.taskCancel != null) { this.taskCancel.cancel(true); }

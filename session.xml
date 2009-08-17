@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?> 
+<response name="datalist">
+    
+<Param>
+    <!--<Servername>203.211.135.50</Servername>-->
+    <Servername>120.50.42.202</Servername>
+    <DBname>Dragonsoul</DBname>
+    <GameID>123456</GameID>
+    <AccountName>decky</AccountName>
+    <NumberOfPlayer>2</NumberOfPlayer>
+    <GameName>Dragonsoul</GameName>
+    <Bet>500</Bet>
+</Param>
+</response>

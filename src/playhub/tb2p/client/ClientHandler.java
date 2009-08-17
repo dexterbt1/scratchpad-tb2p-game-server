@@ -1,0 +1,30 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package playhub.tb2p.client;
+
+import playhub.tb2p.protocol.*;
+
+/**
+ *
+ * @author dexter
+ */
+public interface ClientHandler {
+
+    public void gameCancelled();
+
+    public void opponentNotYetAvailable();
+
+    public void opponentScoreUpdated(long Score);
+
+    public void opponentGameEvent(PDU pdu);
+
+    public void opponentPlayStarted();
+
+    public void opponentPlayEnded();
+
+    public void playerPlayStarted(int duration_seconds);
+
+}
