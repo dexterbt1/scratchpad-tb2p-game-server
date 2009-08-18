@@ -31,10 +31,14 @@ public class Client extends SocketObserverAdapter {
     private NIOService nioService;
     private NIOSocket nioSocket;
 
+    private long pduCounter = 0;
+    private long getNextPduCounter() { return pduCounter++; }
+
     private boolean connected                   = false;
     private boolean loggedIn                    = false;
     private boolean opponentBeenWaited          = false;
     private boolean gameCancelled               = false;
+    private boolean gameDone                    = false;
     private boolean opponentAvailable           = false;
     private boolean playStarted                 = false;
     private boolean playEnded                   = false;
@@ -45,7 +49,11 @@ public class Client extends SocketObserverAdapter {
         this.config = config;
         this.clientHandler = handler;
     }
-    
+
+    public void doIO() throws IOException {
+        this.nioService.selectNonBlocking();
+    }
+
     public void connect(NIOService nioservice) throws IOException {
         this.nioService = nioservice;
         NIOSocket nios = this.nioService.openSocket(this.config.getHost(), this.config.getPort());
@@ -54,22 +62,14 @@ public class Client extends SocketObserverAdapter {
 
     public void endTurn() {
         this.playEnded = true;
+        this.writePDU(new PlayEndedNotificationPDU(this.getNextPduCounter()));
     }
 
     public void updateScore(long score) {
-        
+        this.writePDU(new ScoreUpdateNotificationPDU(this.getNextPduCounter(), score));
     }
 
-
-    public boolean isConnected() { return this.connected; }
-    public boolean isLoggedIn() { return this.loggedIn; }
-    public boolean isOpponentAvailable() { return this.opponentAvailable; }
-    public boolean isPlayStarted() { return this.playStarted; }
-    public boolean isPlayEnded() { return this.playEnded; }
-    public boolean isOpponentPlayEnded() { return opponentPlayEnded; }
-    public boolean isOpponentPlayStarted() { return opponentPlayStarted; }
-    public boolean isGameCancelled() { return gameCancelled; }
-    
+  
 
 
 
@@ -78,39 +78,90 @@ public class Client extends SocketObserverAdapter {
         //   1. wait-op, start-play, wait-op-turn, game-ended
         //   2. wait-op-turn, start-play, game-ended
         while (true) {
-            System.err.println(pdu.toJSONString());
+            System.err.println("< " + pdu.toJSONString());
             boolean handled = false;
-            if (this.isConnected() && !this.isLoggedIn()) {
+            boolean gameInProgress = this.connected && this.loggedIn && (!this.gameCancelled || !this.gameDone);
+            if (this.connected && !this.loggedIn) {
                 handled = this.expectLoginResponse(pdu);
                 break;
             }
-            if (this.isConnected() && this.isLoggedIn() && !this.opponentBeenWaited) {
-                // we're expecting either a wait-op or a wait-op-turn
-                handled = this.expectWaitForOpponent(pdu);
-                break;
-            }
-            if (this.isConnected() && this.isLoggedIn() && this.opponentBeenWaited && !this.isOpponentAvailable()) {
-                // we're player-1 and we are expecting either a start-play or game-cancelled
-                handled = this.expectWaitStartPlayAsPlayer1(pdu);
-                break;
-            }
-            if (this.isConnected() && this.isLoggedIn() && this.isOpponentAvailable()
-                    && this.isPlayStarted() && this.isPlayEnded()
-                    && !this.isOpponentPlayStarted()) {
-                // player-1 expects wait-op-turn
-                handled = this.expectPlayer1FinishedWaitOpponentTurn(pdu);
-                break;
-            }
-            // --- unhandled packet
-//            if (!handled) {
-//                this.clientHandler.opponentGameEvent(pdu);
-//            }
+            if (gameInProgress) {
+                if (!this.opponentBeenWaited) {
+                    // we're expecting either a wait-op or a wait-op-turn
+                    handled = this.expectWaitForOpponent(pdu);
+                    break;
+                }
+                if (this.opponentBeenWaited
+                        && !this.opponentAvailable
+                        )
+                {
+                    // we're player-1 and we are expecting either a start-play or game-cancelled
+                    handled = this.expectWaitStartPlayAsPlayer1(pdu);
+                    break;
+                }
+                if (this.opponentBeenWaited
+                        && this.opponentPlayStarted
+                        && !this.opponentPlayEnded
+                        && !this.playStarted
+                        )
+                {
+                    handled = this.expectWaitStartPlayAsPlayer2(pdu);
+                }
+                if (this.opponentAvailable
+                        && this.playStarted
+                        && this.playEnded
+                        && !this.opponentPlayStarted
+                        )
+                {
+                    // player-1 expects wait-op-turn
+                    handled = this.expectPlayer1FinishedWaitOpponentTurn(pdu);
+                    break;
+                }
+
+                // try if game-done
+                if (this.expectGameDone(pdu)) { break; }
+                // try if score-update
+                if (this.expectScoreUpdate(pdu)) { break; }
+                // --- unhandled packet
+                if (!handled) {
+                    this.clientHandler.opponentGameEvent(pdu);
+                }
+
+            } // game in progress
             break;
         }
     }
 
 
+    private boolean expectScoreUpdate(PDU pdu) {
+        try {
+            ScoreUpdateNotificationPDU scoreupdate = new ScoreUpdateNotificationPDU(pdu);
+            this.clientHandler.opponentScoreUpdated(scoreupdate.getScore());
+            return true;
+        }
+        catch (MalformedPDUException mal) {
+            logger.finer("check if score-update: false");
+        }
+        return false;
+    }
 
+
+    private boolean expectGameDone(PDU pdu) {
+        try {
+            GameDoneNotificationPDU gamedone = new GameDoneNotificationPDU(pdu);
+            if (this.opponentPlayStarted && !this.opponentPlayEnded) {
+                // opponent was playing when the game ended
+                // so we declare that the opponent ended his play
+                this.clientHandler.opponentPlayEnded();
+            }
+            this.clientHandler.gameDone(gamedone.wasWon());
+            return true;
+        }
+        catch (MalformedPDUException mal) {
+            logger.finer("check if game-done: false");
+        }
+        return false;
+    }
     
 
     private boolean expectPlayer1FinishedWaitOpponentTurn(PDU pdu) {
@@ -127,6 +178,22 @@ public class Client extends SocketObserverAdapter {
     }
 
 
+    private boolean expectWaitStartPlayAsPlayer2(PDU pdu) {
+        try {
+            StartPlayNotificationPDU play = new StartPlayNotificationPDU(pdu);
+            this.playStarted = true;
+            this.opponentPlayEnded = true;
+            this.clientHandler.opponentPlayEnded();
+            this.clientHandler.playerPlayStarted(play.getDurationSeconds());
+            return true;
+        }
+        catch (MalformedPDUException malx) {
+            logger.finer("expect wait start-play but not found");
+        }
+        return false;
+    }
+
+
     private boolean expectWaitStartPlayAsPlayer1(PDU pdu) {
         try {
             StartPlayNotificationPDU play = new StartPlayNotificationPDU(pdu);
@@ -137,13 +204,12 @@ public class Client extends SocketObserverAdapter {
         }
         catch (MalformedPDUException malx) {
             try {
-                GameCancelledNotificationPDU gcn = new GameCancelledNotificationPDU(pdu);
+                GameCancelledNotificationPDU cancelled = new GameCancelledNotificationPDU(pdu);
                 this.gameCancelled = true;
                 this.clientHandler.gameCancelled();
-                return true;
             }
-            catch (Exception x) {
-                logger.warning("expecting a start-play as player-1 but got malformed pdu instead");
+            catch (MalformedPDUException malxcancelled) {
+                logger.finer("expect wait start-play but not found");
             }
         }
         return false;
@@ -181,6 +247,7 @@ public class Client extends SocketObserverAdapter {
         try {
             LoginResponsePDU login = new LoginResponsePDU(pdu);
             this.loggedIn = true;
+            this.clientHandler.clientLoggedIn();
             return true;
         }
         catch (Exception e) {
@@ -195,16 +262,19 @@ public class Client extends SocketObserverAdapter {
 
     protected void writePDU(PDU pdu) {
         this.nioSocket.write(pdu.toJSONString().getBytes());
+        System.err.println("> " + pdu.toJSONString());
     }
 
     // -------------------
 
     @Override
     public void connectionOpened(NIOSocket nios) {
+        this.pduCounter = 0;
         this.connected = true;
         this.nioSocket = nios;
+        this.clientHandler.clientConnected();
         Player player = new Player(this.config.getUsername(), this.config.getBetAmount());
-        this.writePDU(new LoginRequestPDU(this.config.getGameId(), player));
+        this.writePDU(new LoginRequestPDU(this.getNextPduCounter(), this.config.getGameId(), player));
     }
 
     @Override

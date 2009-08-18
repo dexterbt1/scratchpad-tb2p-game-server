@@ -13,7 +13,13 @@ import playhub.tb2p.protocol.*;
  */
 public interface ClientHandler {
 
+    public void clientConnected();
+
+    public void clientLoggedIn();
+
     public void gameCancelled();
+
+    public void gameDone(boolean won);
 
     public void opponentNotYetAvailable();
 

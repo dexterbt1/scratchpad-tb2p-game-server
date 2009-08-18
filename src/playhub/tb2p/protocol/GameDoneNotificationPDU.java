@@ -5,6 +5,7 @@
 
 package playhub.tb2p.protocol;
 
+import playhub.tb2p.exceptions.*;
 /**
  *
  * @author dexter
@@ -27,5 +28,27 @@ public class GameDoneNotificationPDU extends PDU {
         this.won = won;
         this.setPduField("won", Boolean.valueOf(won));
     }
+
+    public GameDoneNotificationPDU(PDU pdu) throws MalformedPDUException {
+        if (     (pdu.getCommand().equals(COMMAND))
+              && (pdu.getType()==PDU.Type.NOTIFICATION)
+              && (pdu.json.containsKey("won")))
+        {
+            this.setCommand(COMMAND);
+            this.setId(pdu.getId());
+            this.setType(pdu.getType());
+            try {
+                Boolean bwon = (Boolean)pdu.getPduField("won");
+                this.setWon(bwon.booleanValue());
+            }
+            catch (Exception e) {
+                throw new MalformedPDUException("Invalid GameDoneNotification, unparsable 'won' field.");
+            }
+        }
+        else {
+            throw new MalformedPDUException("Invalid GameDoneNotification");
+        }
+    }
+
     
 }

@@ -14,7 +14,7 @@ public class PlayEndedNotificationPDU extends PDU {
 
     public static final String COMMAND = "PLAY_ENDED";
 
-    public PlayEndedNotificationPDU(int id) {
+    public PlayEndedNotificationPDU(long id) {
         this.setCommand(COMMAND);
         this.setId(id);
         this.setType(Type.NOTIFICATION);

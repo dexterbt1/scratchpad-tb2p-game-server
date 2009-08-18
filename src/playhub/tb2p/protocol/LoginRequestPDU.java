@@ -20,7 +20,10 @@ public class LoginRequestPDU extends PDU {
     private String playerName;
     private BigDecimal betAmount;
 
-    public LoginRequestPDU(String gameId, Player p) {
+    public LoginRequestPDU(long id, String gameId, Player p) {
+        this.setId(id);
+        this.setCommand(COMMAND);
+        this.setType(Type.REQUEST);
         this.gameId = gameId;
         this.playerName = p.getName();
         this.betAmount = p.getBetAmount();
