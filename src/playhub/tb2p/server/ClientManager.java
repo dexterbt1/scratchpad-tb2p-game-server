@@ -9,7 +9,6 @@ import java.util.logging.*;
 
 
 import naga.*;
-import naga.packetreader.*;
 
 import playhub.tb2p.protocol.*;
 import playhub.tb2p.exceptions.*;
@@ -31,7 +30,8 @@ public class ClientManager extends SocketObserverAdapter {
     public void connectionOpened(NIOSocket socket) {
         // otherwise, we will accept the connection
         logger.fine("socket opened: "+socket.getIp()+":"+socket.getPort());
-        socket.setPacketReader(new AsciiLinePacketReader());
+        socket.setPacketReader(new naga.packetreader.RegularPacketReader(2, true));
+        socket.setPacketWriter(new naga.packetwriter.RegularPacketWriter(2, true));
         gk.registerSocket(socket);
     }
 

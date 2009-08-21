@@ -26,6 +26,7 @@ public class MainCLI {
 
         //get the top Logger:
         Logger topLogger = java.util.logging.Logger.getLogger("");
+        
 
         // Handler for console (reuse it if it already exists)
         Handler consoleHandler = null;

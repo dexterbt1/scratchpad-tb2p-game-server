@@ -24,14 +24,29 @@ public class LoginRequestPDU extends PDU {
         this.setId(id);
         this.setCommand(COMMAND);
         this.setType(Type.REQUEST);
-        this.gameId = gameId;
-        this.playerName = p.getName();
-        this.betAmount = p.getBetAmount();
+        this.setGameId(gameId);
+        this.setPlayerName(p.getName());
+        this.setBetAmount(p.getBetAmount());
     }
 
     public String getGameId() { return this.gameId; }
     public String getPlayerName() { return this.playerName; }
     public BigDecimal getBetAmount() { return this.betAmount; }
+
+    public void setGameId(String gameId) { 
+        this.gameId = gameId;
+        this.json.put("game_id", gameId);
+    }
+
+    public void setPlayerName(String playerName) { 
+        this.playerName = playerName;
+        this.json.put("player_name", playerName);
+    }
+
+    public void setBetAmount(BigDecimal betAmount) { 
+        this.betAmount = betAmount;
+        this.json.put("bet_amount", betAmount.toPlainString());
+    }
 
 
     public LoginRequestPDU(PDU pdu) throws InvalidLoginException {
@@ -44,7 +59,7 @@ public class LoginRequestPDU extends PDU {
                 gid = pdu.getPduFieldString("game_id");
                 pname = pdu.getPduFieldString("player_name");
                 bet = new BigDecimal(pdu.getPduFieldString("bet_amount"));
-                successParse = true;
+                successParse = (gid != null) && (pname != null) && (bet != null);
             }
         }
         catch (Exception e) {
@@ -52,9 +67,9 @@ public class LoginRequestPDU extends PDU {
         }
         finally {
             if (successParse) {
-                this.playerName = pname;
-                this.gameId = gid;
-                this.betAmount = bet;
+                this.setPlayerName(pname);
+                this.setGameId(gid);
+                this.setBetAmount(bet);
             }
             else {
                 throw new InvalidLoginException("Login PDU expected");

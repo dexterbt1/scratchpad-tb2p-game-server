@@ -62,6 +62,8 @@ public class Client extends SocketObserverAdapter {
         this.nioService = nioservice;
         NIOSocket nios = this.nioService.openSocket(this.config.getHost(), this.config.getPort());
         nios.listen(this);
+        nios.setPacketReader(new naga.packetreader.RegularPacketReader(2, true));
+        nios.setPacketWriter(new naga.packetwriter.RegularPacketWriter(2, true));
     }
 
     public void endTurn() {
