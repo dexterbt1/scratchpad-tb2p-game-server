@@ -65,6 +65,7 @@ public class ClientTest {
         // simulate failure
         client.connectionBroken(this.testSocket, new Exception("simulated login failure"));
         verify(clientHandler, never()).clientLoggedIn();
+        verify(clientHandler).clientDisconnected();
     }
 
 
@@ -88,7 +89,7 @@ public class ClientTest {
         }
     }
     public byte[] packetFromPDU(PDU p) { return p.toJSONString().getBytes(); }
-    
+
 
     @Test
     public void test_login_success() {

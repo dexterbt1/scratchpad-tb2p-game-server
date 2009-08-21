@@ -284,6 +284,7 @@ public class Client extends SocketObserverAdapter {
     @Override
     public void connectionBroken(NIOSocket arg0, Exception arg1) {
         this.connected = false;
+        this.clientHandler.clientDisconnected();
     }
 
     @Override

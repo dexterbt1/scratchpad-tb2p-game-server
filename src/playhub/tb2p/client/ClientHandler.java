@@ -15,6 +15,8 @@ public interface ClientHandler {
 
     public void clientConnected();
 
+    public void clientDisconnected();
+
     public void clientLoggedIn();
 
     public void gameCancelled();
