@@ -54,6 +54,10 @@ public class Client extends SocketObserverAdapter {
         this.nioService.selectNonBlocking();
     }
 
+    public void connect() throws IOException {
+        this.connect(new NIOService());
+    }
+
     public void connect(NIOService nioservice) throws IOException {
         this.nioService = nioservice;
         NIOSocket nios = this.nioService.openSocket(this.config.getHost(), this.config.getPort());
