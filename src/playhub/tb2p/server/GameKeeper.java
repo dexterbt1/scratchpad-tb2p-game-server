@@ -186,6 +186,10 @@ public class GameKeeper {
                 NIOSocket peer = nios1;
                 if (nios1 == nios) {
                     peer = nios2;
+                    logger.finer("Relaying to player-2 packet command: "+pduToRelay.getCommand());
+                }
+                else {
+                    logger.finer("Relaying to player-1 packet command: "+pduToRelay.getCommand());
                 }
                 this.writePDU(peer, pduToRelay);
             }
@@ -320,6 +324,7 @@ public class GameKeeper {
                     nios1.closeAfterWrite();
                     this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
                     nios2.closeAfterWrite();
+                    logger.finer("player-1 declared winner: scores(p1, p2) = ("+gs.getPlayer1Score()+", "+gs.getPlayer2Score()+")");
                 }
                 else {
                     // p2 is the winner
@@ -327,6 +332,7 @@ public class GameKeeper {
                     nios1.closeAfterWrite();
                     this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),true));
                     nios2.closeAfterWrite();
+                    logger.finer("player-2 declared winner: scores(p1, p2) = ("+gs.getPlayer1Score()+", "+gs.getPlayer2Score()+")");
                 }
             }
             else {
