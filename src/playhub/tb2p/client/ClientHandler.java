@@ -25,6 +25,8 @@ public interface ClientHandler {
 
     public void opponentNotYetAvailable();
 
+    public void opponentAvailable(String opponetName);
+
     public void opponentScoreUpdated(long Score);
 
     public void opponentGameEvent(PDU pdu);

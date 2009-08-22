@@ -218,10 +218,12 @@ public class GameKeeper {
             this.writePDU(nios, new LoginResponsePDU(pdu.getId()));
             logger.finer("player="+lp.getPlayerName()+" assigned to existing gameId="+game.getGameId());
             // player-2 should wait for his/her turn
+            this.writePDU(nios, new OpponentAvailableNotificationPDU(this.getNextPduCounter(), game.getPlayer1().getName()));
             this.writePDU(nios, new WaitTurnNotificationPDU(this.getNextPduCounter()));
             // and we'll let the player-1 start playing (w/ duration)
             game.startPlayPlayer1();
             NIOSocket nios1 = mapPlayerSocket.get(game.getPlayer1());
+            this.writePDU(nios1, new OpponentAvailableNotificationPDU(this.getNextPduCounter(), game.getPlayer2().getName()));
             this.writePDU(nios1, new StartPlayNotificationPDU(this.getNextPduCounter(), settings.getPlayTurnDurationSeconds()));
 
             // we need to timeout the turn (turn_duration+client_wait),

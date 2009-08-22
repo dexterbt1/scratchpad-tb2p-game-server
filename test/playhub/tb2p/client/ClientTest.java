@@ -72,6 +72,7 @@ public class ClientTest {
     public byte[] packetLoginResponse() { return new LoginResponsePDU(1L).toJSONString().getBytes(); }
     public byte[] packetWaitTurn() { return new WaitTurnNotificationPDU(1L).toJSONString().getBytes(); }
     public byte[] packetWaitOpponent() { return new WaitOpponentNotificationPDU(1L).toJSONString().getBytes(); }
+    public byte[] packetOpAvailable(String opName) { return new OpponentAvailableNotificationPDU(1L,opName).toJSONString().getBytes(); }
     public byte[] packetGameCancelled() { return new GameCancelledNotificationPDU(1L).toJSONString().getBytes(); }
     public byte[] packetStartPlay(int duration) { return new StartPlayNotificationPDU(1L,duration).toJSONString().getBytes(); }
     public byte[] packetGameDone(boolean won) { return new GameDoneNotificationPDU(1L, won).toJSONString().getBytes(); }
@@ -106,6 +107,7 @@ public class ClientTest {
         client.connectionOpened(this.testSocket);
         client.packetReceived(this.testSocket, this.packetLoginResponse());
         client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        verify(clientHandler).opponentNotYetAvailable();
         // simulate that there was NO opponent after server timeout, there game is cancelled
         client.packetReceived(this.testSocket, this.packetGameCancelled());
         verify(clientHandler).gameCancelled();
@@ -118,6 +120,8 @@ public class ClientTest {
         client.packetReceived(this.testSocket, this.packetLoginResponse());
         client.packetReceived(this.testSocket, this.packetWaitOpponent());
         verify(clientHandler).opponentNotYetAvailable();
+        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        verify(clientHandler).opponentAvailable("theop");
         // simulate that an opponent entered, and player1 now starts playing
         client.packetReceived(this.testSocket, this.packetStartPlay(77));
         verify(clientHandler).playerPlayStarted(77);
@@ -125,7 +129,6 @@ public class ClientTest {
         client.packetReceived(this.testSocket, this.packetWaitTurn());
         verify(clientHandler).opponentPlayStarted();
         client.packetReceived(this.testSocket, this.packetGameDone(true));
-        verify(clientHandler).opponentPlayEnded();
         verify(clientHandler).gameDone(true);
     }
 
@@ -135,6 +138,7 @@ public class ClientTest {
         client.connectionOpened(this.testSocket);
         client.packetReceived(this.testSocket, this.packetLoginResponse());
         client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
         client.packetReceived(this.testSocket, this.packetStartPlay(77));
         verify(clientHandler).playerPlayStarted(77);
         client.packetReceived(this.testSocket, this.packetGameDone(true));
@@ -147,6 +151,7 @@ public class ClientTest {
         client.connectionOpened(this.testSocket);
         client.packetReceived(this.testSocket, this.packetLoginResponse());
         client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
         client.packetReceived(this.testSocket, this.packetStartPlay(77));
         verify(clientHandler).playerPlayStarted(77);
         client.packetReceived(this.testSocket, this.packetGameDone(false));
@@ -158,6 +163,8 @@ public class ClientTest {
     public void test_flow_as_player2_won_basic() {
         client.connectionOpened(this.testSocket);
         client.packetReceived(this.testSocket, this.packetLoginResponse());
+        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        verify(clientHandler).opponentAvailable("theop");
         client.packetReceived(this.testSocket, this.packetWaitTurn());
         verify(clientHandler).opponentPlayStarted();
         client.packetReceived(this.testSocket, this.packetStartPlay(33));
@@ -174,6 +181,8 @@ public class ClientTest {
         client.connectionOpened(this.testSocket);
         client.packetReceived(this.testSocket, this.packetLoginResponse()); // 1st write
         client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        verify(clientHandler).opponentAvailable("theop");
         client.packetReceived(this.testSocket, this.packetStartPlay(33));
         client.updateScore(0L);            // 2nd write
         client.updateScore(2000L);         // 3rd write
