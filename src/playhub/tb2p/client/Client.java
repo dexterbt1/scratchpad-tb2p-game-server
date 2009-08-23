@@ -73,8 +73,6 @@ public class Client extends SocketObserverAdapter {
         this.writePDU(new ScoreUpdateNotificationPDU(this.getNextPduCounter(), score));
     }
 
-  
-
 
 
     private void interpretPDU(PDU pdu) {
@@ -82,7 +80,7 @@ public class Client extends SocketObserverAdapter {
         //   1. wait-op, op-avail, start-play, wait-op-turn, game-ended
         //   2. op-avail, wait-op-turn, start-play, game-ended
         while (true) {
-            System.err.println("< " + pdu.toJSONString());
+            //System.err.println("< " + pdu.toJSONString());
             boolean handled = false;
             boolean gameInProgress = this.connected && this.loggedIn && (!this.gameCancelled || !this.gameDone);
             if (this.connected && !this.loggedIn) {
@@ -188,9 +186,9 @@ public class Client extends SocketObserverAdapter {
 
 
 
-    protected void writePDU(PDU pdu) {
+    public void writePDU(PDU pdu) {
         this.nioSocket.write(pdu.toJSONString().getBytes());
-        System.err.println("> " + pdu.toJSONString());
+        //System.err.println("> " + pdu.toJSONString());
     }
 
     // -------------------
