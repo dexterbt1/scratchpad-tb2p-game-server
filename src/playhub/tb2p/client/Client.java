@@ -200,7 +200,12 @@ public class Client extends SocketObserverAdapter {
         this.nioSocket = nios;
         this.clientHandler.clientConnected();
         Player player = new Player(this.config.getUsername(), this.config.getBetAmount());
-        this.writePDU(new LoginRequestPDU(this.getNextPduCounter(), this.config.getGameId(), player));
+        this.writePDU(new LoginRequestPDU(
+                this.getNextPduCounter(),
+                this.config.getGameId(),
+                this.config.getGameName(),
+                player)
+        );
     }
 
     @Override

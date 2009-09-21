@@ -17,6 +17,8 @@ public class ServerSettings {
     private int maxConnections;
     private int playTurnDurationSeconds;
     private int clientWaitTimeoutSeconds;
+    private String scoreQueueFilename;
+    private String scoreReportURL;
 
     public ServerSettings() {
     }
@@ -33,6 +35,24 @@ public class ServerSettings {
     public int getClientWaitTimeoutSeconds() { return this.clientWaitTimeoutSeconds; }
     public void setClientWaitTimeoutSeconds(int s) { this.clientWaitTimeoutSeconds = s; }
 
+    public String getScoreQueueFilename() {
+        return scoreQueueFilename;
+    }
+
+    public void setScoreQueueFilename(String scoreQueueFilename) {
+        this.scoreQueueFilename = scoreQueueFilename;
+    }
+
+    public String getScoreReportURL() {
+        return scoreReportURL;
+    }
+
+    public void setScoreReportURL(String highscoreReportURL) {
+        this.scoreReportURL = highscoreReportURL;
+    }
+
+
+
     public static ServerSettings getInstance(Properties prop) {
         ServerSettings settings = new ServerSettings();
         // server.port
@@ -47,6 +67,9 @@ public class ServerSettings {
         // server.play_turn_duration_seconds
         int client_wait = Integer.parseInt(prop.getProperty("server.client_wait_timeout_seconds"));
         settings.setClientWaitTimeoutSeconds(client_wait);
+        // server.highscore*
+        settings.setScoreQueueFilename(prop.getProperty("server.score_queue_filename"));
+        settings.setScoreReportURL(prop.getProperty("server.score_report_url"));
 
         return settings;
     }

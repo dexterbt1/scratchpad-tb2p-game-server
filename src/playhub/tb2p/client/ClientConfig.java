@@ -16,6 +16,7 @@ public class ClientConfig {
     private String host;
     private int port;
     private String gameId;
+    private String gameName;
     private String username;
     private BigDecimal betAmount;
 
@@ -58,6 +59,14 @@ public class ClientConfig {
 
     public void setGameId(String gameId) {
         this.gameId = gameId;
+    }
+
+    public String getGameName() {
+        return gameName;
+    }
+
+    public void setGameName(String gameName) {
+        this.gameName = gameName;
     }
 
 

@@ -13,6 +13,8 @@ import naga.*;
 import playhub.tb2p.exceptions.*;
 import playhub.tb2p.protocol.*;
 
+import com.gaborcselle.persistent.*;
+
 /**
  *
  * @author dexter
@@ -35,10 +37,17 @@ public class GameKeeper {
 
     private long pdu_counter = 0;
 
+    private PersistentQueue scoreQueue;
 
    
-    public GameKeeper(ServerSettings settings) {
+    public GameKeeper(ServerSettings settings) throws java.io.IOException {
         this.settings = settings;
+        // setup highscore queue and separate reporter thread
+        scoreQueue = new PersistentQueue(settings.getScoreQueueFilename());
+        new Thread(
+                new ScoreLogReporter(scoreQueue, settings.getScoreReportURL())
+        ).start();
+
     }
 
     public void registerSocket(NIOSocket nios) {
@@ -242,7 +251,7 @@ public class GameKeeper {
         }
         else {
             // new game
-            game = new GameSession(lp.getGameId());
+            game = new GameSession(lp.getGameId(), lp.getGameName());
             game.loginPlayer1(player);
             mapIdSession.put(lp.getGameId(), game);
             gamesWaitingPlayers.add(game);
@@ -314,6 +323,26 @@ public class GameKeeper {
             Player p2 = gs.getPlayer2();
             NIOSocket nios2 = mapPlayerSocket.get(p2);
 
+            ScoreLogEntry logp1, logp2;
+            logp1 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer1().getName(),
+                        false, // lost
+                        gs.getPlayer1Score(),
+                        true, // assumed to be ALWAYS proper win, for now
+                        "PC"
+                    );
+            logp2 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer2().getName(),
+                        false, // lost
+                        gs.getPlayer2Score(),
+                        true, // assumed to be ALWAYS proper win, for now
+                        "PC"
+                    );
+
             Player winner = gs.getWinner();
 
             if (winner != null) {
@@ -325,6 +354,7 @@ public class GameKeeper {
                     this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
                     nios2.closeAfterWrite();
                     logger.finer("player-1 declared winner: scores(p1, p2) = ("+gs.getPlayer1Score()+", "+gs.getPlayer2Score()+")");
+                    logp1.playerWon = true;
                 }
                 else {
                     // p2 is the winner
@@ -333,6 +363,7 @@ public class GameKeeper {
                     this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),true));
                     nios2.closeAfterWrite();
                     logger.finer("player-2 declared winner: scores(p1, p2) = ("+gs.getPlayer1Score()+", "+gs.getPlayer2Score()+")");
+                    logp2.playerWon = true;
                 }
             }
             else {
@@ -341,6 +372,15 @@ public class GameKeeper {
                 nios1.closeAfterWrite();
                 this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(),false));
                 nios2.closeAfterWrite();
+            }
+
+            try {
+                scoreQueue.add(logp1);
+                scoreQueue.add(logp2);
+            }
+            catch (java.io.IOException ioe) {
+                logger.severe(ioe.toString());
+                System.exit(255);
             }
         }
         catch (GameStateViolation gsv) {
@@ -391,6 +431,33 @@ public class GameKeeper {
                 this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(), true));
                 nios2.closeAfterWrite();
             }
+            ScoreLogEntry logp1, logp2;
+            logp1 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer1().getName(),
+                        false, // lost
+                        gs.getPlayer1Score(),
+                        false, // disconnect (or penalty)
+                        "PC"
+                    );
+            logp2 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer2().getName(),
+                        true, // won
+                        gs.getPlayer2Score(),
+                        false, // disconnect (or penalty)
+                        "PC"
+                    );
+            try {
+                scoreQueue.add(logp1);
+                scoreQueue.add(logp2);
+            }
+            catch (java.io.IOException ioe) {
+                logger.severe(ioe.toString());
+                System.exit(255);
+            }
         }
         catch (GameStateViolation gsv) {
             logger.warning("GameStateViolation detected at gameId="+gs.getGameId());
@@ -413,6 +480,33 @@ public class GameKeeper {
             if (nios2 != null) {
                 this.writePDU(nios2, new GameDoneNotificationPDU(this.getNextPduCounter(), false));
                 nios2.closeAfterWrite();
+            }
+            ScoreLogEntry logp1, logp2;
+            logp1 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer1().getName(),
+                        true, // won
+                        gs.getPlayer1Score(),
+                        false, // disconnect (or penalty)
+                        "PC"
+                    );
+            logp2 = new ScoreLogEntry(
+                        gs.getGameId(),
+                        gs.getGameName(),
+                        gs.getPlayer2().getName(),
+                        false, // lost
+                        gs.getPlayer2Score(),
+                        false, // disconnect (or penalty)
+                        "PC"
+                    );
+            try {
+                scoreQueue.add(logp1);
+                scoreQueue.add(logp2);
+            }
+            catch (java.io.IOException ioe) {
+                logger.severe(ioe.toString());
+                System.exit(255);
             }
         }
         catch (GameStateViolation gsv) {

@@ -23,7 +23,13 @@ public class ClientManager extends SocketObserverAdapter {
     private GameKeeper gk;
     
     public ClientManager(ServerSettings settings) {
-        gk = new GameKeeper(settings);
+        try {
+            gk = new GameKeeper(settings);
+        }
+        catch (java.io.IOException e) {
+            e.printStackTrace();
+            System.exit(255);
+        }
     }
 
     @Override

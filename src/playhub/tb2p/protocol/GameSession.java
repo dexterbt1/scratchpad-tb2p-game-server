@@ -26,6 +26,7 @@ public class GameSession {
 
     private State gameState;
     private String gameId, gameIdLowercase;
+    private String gameName;
     private Player player1, player2, winner;
     private long player1Score, player2Score;
     private boolean player1TurnStarted, player2TurnStarted;
@@ -33,9 +34,10 @@ public class GameSession {
 
     private ScheduledFuture<?> taskCancel, taskPenalizeP1, taskPenalizeP2;
 
-    public GameSession(String gameId) {
+    public GameSession(String gameId, String gameName) {
         this.gameId = gameId;
         this.gameIdLowercase = gameId.toLowerCase();
+        this.gameName = gameName;
         this.gameState = State.CREATED;
         this.player1TurnCompleted = false;
         this.player2TurnCompleted = false;
@@ -63,6 +65,7 @@ public class GameSession {
 
     public State getGameState() { return this.gameState; }
     public String getGameId() { return this.gameId; }
+    public String getGameName() { return this.gameName; }
     public Player getPlayer1() { return this.player1; }
     public Player getPlayer2() { return this.player2; }
     public Player getWinner() { return this.winner; }
