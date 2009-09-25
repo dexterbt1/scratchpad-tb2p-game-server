@@ -3,9 +3,9 @@
  * and open the template in the editor.
  */
 
-package playhub.tb2p.client;
+package playhub.tb2p.server;
 
-import playhub.tb2p.server.ServerCipher;
+import playhub.tb2p.client.ClientCipher;
 import java.util.*;
 
 import org.junit.After;
@@ -21,7 +21,7 @@ import static org.junit.Assert.*;
  */
 public class ServerEncryptionTest {
 
-        @BeforeClass
+    @BeforeClass
     public static void setUpClass() throws Exception {
     }
 

@@ -5,6 +5,7 @@
 
 package playhub.tb2p.client;
 
+import playhub.tb2p.server.ServerCipher;
 import java.math.BigDecimal;
 import naga.*;
 import org.junit.After;
@@ -27,6 +28,7 @@ public class ClientTest {
     private ClientConfig config;
     private Client client;
     private ClientHandler clientHandler = mock(ClientHandler.class);
+    private ServerCipher servercipher;
     private NIOService testService = mock(NIOService.class);
     private NIOSocket testSocket = mock(NIOSocket.class);
 
@@ -52,6 +54,13 @@ public class ClientTest {
         // assume this does not go thru connect()
         client = new Client(config, clientHandler);
         testSocket = mock(NIOSocket.class);
+        try {
+            servercipher = new ServerCipher();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            System.exit(255);
+        }
     }
 
     @After
@@ -68,6 +77,10 @@ public class ClientTest {
         verify(clientHandler).clientDisconnected();
     }
 
+    public byte[] encd(byte[] raw) {
+        try { return servercipher.encrypt(raw); }
+        catch (Exception e) { return null; }
+    }
 
     public byte[] packetLoginResponse() { return new LoginResponsePDU(1L).toJSONString().getBytes(); }
     public byte[] packetWaitTurn() { return new WaitTurnNotificationPDU(1L).toJSONString().getBytes(); }
@@ -97,7 +110,7 @@ public class ClientTest {
         client.connectionOpened(this.testSocket);
         verify(clientHandler).clientConnected();
         // simulate login response
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
         verify(clientHandler).clientLoggedIn();
     }
 
@@ -105,11 +118,11 @@ public class ClientTest {
     @Test
     public void test_flow_as_player1_cancelled() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
-        client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
+        client.packetReceived(this.testSocket, encd(this.packetWaitOpponent()));
         verify(clientHandler).opponentNotYetAvailable();
         // simulate that there was NO opponent after server timeout, there game is cancelled
-        client.packetReceived(this.testSocket, this.packetGameCancelled());
+        client.packetReceived(this.testSocket, encd(this.packetGameCancelled()));
         verify(clientHandler).gameCancelled();
     }
 
@@ -117,18 +130,18 @@ public class ClientTest {
     @Test
     public void test_flow_as_player1_won_basic() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
-        client.packetReceived(this.testSocket, this.packetWaitOpponent());
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
+        client.packetReceived(this.testSocket, encd(this.packetWaitOpponent()));
         verify(clientHandler).opponentNotYetAvailable();
-        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        client.packetReceived(this.testSocket, encd(this.packetOpAvailable("theop")));
         verify(clientHandler).opponentAvailable("theop");
         // simulate that an opponent entered, and player1 now starts playing
-        client.packetReceived(this.testSocket, this.packetStartPlay(77));
+        client.packetReceived(this.testSocket, encd(this.packetStartPlay(77)));
         verify(clientHandler).playerPlayStarted(77);
         client.endTurn();
-        client.packetReceived(this.testSocket, this.packetWaitTurn());
+        client.packetReceived(this.testSocket, encd(this.packetWaitTurn()));
         verify(clientHandler).opponentPlayStarted();
-        client.packetReceived(this.testSocket, this.packetGameDone(true));
+        client.packetReceived(this.testSocket, encd(this.packetGameDone(true)));
         verify(clientHandler).gameDone(true);
     }
 
@@ -136,12 +149,12 @@ public class ClientTest {
     @Test
     public void test_flow_as_player1_won_player2_disconnected() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
-        client.packetReceived(this.testSocket, this.packetWaitOpponent());
-        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
-        client.packetReceived(this.testSocket, this.packetStartPlay(77));
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
+        client.packetReceived(this.testSocket, encd(this.packetWaitOpponent()));
+        client.packetReceived(this.testSocket, encd(this.packetOpAvailable("theop")));
+        client.packetReceived(this.testSocket, encd(this.packetStartPlay(77)));
         verify(clientHandler).playerPlayStarted(77);
-        client.packetReceived(this.testSocket, this.packetGameDone(true));
+        client.packetReceived(this.testSocket, encd(this.packetGameDone(true)));
         verify(clientHandler).gameDone(true);
     }
 
@@ -149,12 +162,12 @@ public class ClientTest {
     @Test
     public void test_flow_as_player1_lost_invalid_client() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
-        client.packetReceived(this.testSocket, this.packetWaitOpponent());
-        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
-        client.packetReceived(this.testSocket, this.packetStartPlay(77));
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
+        client.packetReceived(this.testSocket, encd(this.packetWaitOpponent()));
+        client.packetReceived(this.testSocket, encd(this.packetOpAvailable("theop")));
+        client.packetReceived(this.testSocket, encd(this.packetStartPlay(77)));
         verify(clientHandler).playerPlayStarted(77);
-        client.packetReceived(this.testSocket, this.packetGameDone(false));
+        client.packetReceived(this.testSocket, encd(this.packetGameDone(false)));
         verify(clientHandler).gameDone(false);
     }
 
@@ -162,16 +175,16 @@ public class ClientTest {
     @Test
     public void test_flow_as_player2_won_basic() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse());
-        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse()));
+        client.packetReceived(this.testSocket, encd(this.packetOpAvailable("theop")));
         verify(clientHandler).opponentAvailable("theop");
-        client.packetReceived(this.testSocket, this.packetWaitTurn());
+        client.packetReceived(this.testSocket, encd(this.packetWaitTurn()));
         verify(clientHandler).opponentPlayStarted();
-        client.packetReceived(this.testSocket, this.packetStartPlay(33));
+        client.packetReceived(this.testSocket, encd(this.packetStartPlay(33)));
         verify(clientHandler).opponentPlayEnded();
         verify(clientHandler).playerPlayStarted(33);
         client.endTurn();
-        client.packetReceived(this.testSocket, this.packetGameDone(true));
+        client.packetReceived(this.testSocket, encd(this.packetGameDone(true)));
         verify(clientHandler).gameDone(true);
     }
 
@@ -179,27 +192,27 @@ public class ClientTest {
     @Test
     public void test_flow_as_player1_with_game_events() {
         client.connectionOpened(this.testSocket);
-        client.packetReceived(this.testSocket, this.packetLoginResponse()); // 1st write
-        client.packetReceived(this.testSocket, this.packetWaitOpponent());
-        client.packetReceived(this.testSocket, this.packetOpAvailable("theop"));
+        client.packetReceived(this.testSocket, encd(this.packetLoginResponse())); // 1st write
+        client.packetReceived(this.testSocket, encd(this.packetWaitOpponent()));
+        client.packetReceived(this.testSocket, encd(this.packetOpAvailable("theop")));
         verify(clientHandler).opponentAvailable("theop");
-        client.packetReceived(this.testSocket, this.packetStartPlay(33));
+        client.packetReceived(this.testSocket, encd(this.packetStartPlay(33)));
         client.updateScore(0L);            // 2nd write
         client.updateScore(2000L);         // 3rd write
         client.endTurn();                  // 4th write
         verify(this.testSocket, times(4)).write(anyString().getBytes());
-        client.packetReceived(this.testSocket, this.packetWaitTurn());
+        client.packetReceived(this.testSocket, encd(this.packetWaitTurn()));
         PDU p;
         p = new GameEventKeyDownPDU(1L,1234);
-        client.packetReceived(this.testSocket, this.packetFromPDU(p));
+        client.packetReceived(this.testSocket, encd(this.packetFromPDU(p)));
         p = new GameEventKeyDownPDU(2L,4321);
-        client.packetReceived(this.testSocket, this.packetFromPDU(p));
+        client.packetReceived(this.testSocket, encd(this.packetFromPDU(p)));
         verify(clientHandler, times(2)).opponentGameEvent(any(PDU.class));
-        client.packetReceived(this.testSocket, this.packetScoreUpdate(222L));
-        client.packetReceived(this.testSocket, this.packetScoreUpdate(223L));
+        client.packetReceived(this.testSocket, encd(this.packetScoreUpdate(222L)));
+        client.packetReceived(this.testSocket, encd(this.packetScoreUpdate(223L)));
         verify(clientHandler).opponentScoreUpdated(222L);
         verify(clientHandler).opponentScoreUpdated(223L);
-        client.packetReceived(this.testSocket, this.packetGameDone(true));
+        client.packetReceived(this.testSocket, encd(this.packetGameDone(true)));
     }
 
 
