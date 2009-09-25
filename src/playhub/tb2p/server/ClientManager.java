@@ -21,6 +21,16 @@ public class ClientManager extends SocketObserverAdapter {
 
     protected static Logger logger = Logger.getLogger(ClientManager.class.getCanonicalName());
     private GameKeeper gk;
+    private static ServerCipher servercipher;
+        static {
+            try {
+                servercipher = new ServerCipher();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                System.exit(255);
+            }
+        }
     
     public ClientManager(ServerSettings settings) {
         try {
@@ -48,14 +58,15 @@ public class ClientManager extends SocketObserverAdapter {
     }
 
     @Override
-    public void packetReceived(NIOSocket socket, byte[] packet) {
+    public void packetReceived(NIOSocket socket, byte[] encrypted) {
         PDU pdu;
         try {
-            pdu = PDU.parsedFromPacket(packet);
+            byte[] decrypted = servercipher.decrypt(encrypted);
+            pdu = PDU.parsedFromPacket(decrypted);
             gk.receivePDU(socket, pdu);
         }
-        catch (MalformedPDUException mpe) {
-            logger.warning(mpe.toString());
+        catch (Exception e) {
+            logger.warning(e.toString());
             socket.close();
         }
     }

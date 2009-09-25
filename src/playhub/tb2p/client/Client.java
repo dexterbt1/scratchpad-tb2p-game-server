@@ -27,6 +27,16 @@ public class Client extends SocketObserverAdapter {
     // EndPlay
 
     private static final Logger logger = Logger.getLogger(Client.class.getCanonicalName());
+    private static ClientCipher clientcipher;
+        static {
+            try {
+                clientcipher = new ClientCipher();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                System.exit(255);
+            }
+        }
     private ClientHandler clientHandler;
     private ClientConfig config;
     private NIOService nioService;
@@ -187,7 +197,15 @@ public class Client extends SocketObserverAdapter {
 
 
     public void writePDU(PDU pdu) {
-        this.nioSocket.write(pdu.toJSONString().getBytes());
+        try {
+            byte[] pdubytes = pdu.toJSONString().getBytes("UTF8");
+            byte[] encrypted = clientcipher.encrypt(pdubytes);
+            this.nioSocket.write(encrypted);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            System.exit(255);
+        }
         //System.err.println("> " + pdu.toJSONString());
     }
 
@@ -215,13 +233,17 @@ public class Client extends SocketObserverAdapter {
     }
 
     @Override
-    public void packetReceived(NIOSocket arg0, byte[] arg1) {
+    public void packetReceived(NIOSocket arg0, byte[] encrypted) {
         try {
-            PDU pdu = PDU.parsedFromPacket(arg1);
+            byte[] decrypted = clientcipher.decrypt(encrypted);
+            PDU pdu = PDU.parsedFromPacket(decrypted);
             this.interpretPDU(pdu);
         }
         catch (MalformedPDUException malx) {
             // TODO: disconnect?
+        }
+        catch (Exception e) {
+
         }
     }
 

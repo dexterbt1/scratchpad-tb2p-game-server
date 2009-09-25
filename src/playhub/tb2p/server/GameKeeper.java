@@ -39,6 +39,17 @@ public class GameKeeper {
 
     private PersistentQueue scoreQueue;
 
+    private static ServerCipher servercipher;
+        static {
+            try {
+                servercipher = new ServerCipher();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                System.exit(255);
+            }
+        }
+
    
     public GameKeeper(ServerSettings settings) throws java.io.IOException {
         this.settings = settings;
@@ -517,7 +528,15 @@ public class GameKeeper {
 
 
     public void writePDU(NIOSocket nios, PDU pdu) {
-        nios.write(pdu.toJSONString().getBytes());
+        try {
+            byte[] pdubytes = pdu.toJSONString().getBytes("UTF8");
+            byte[] encrypted = servercipher.encrypt(pdubytes);
+            nios.write(encrypted);
+        }
+        catch (Exception e) {
+            logger.warning(e.toString());
+        }
+        
     }
 
     public long getNextPduCounter() { return this.pdu_counter++; }
